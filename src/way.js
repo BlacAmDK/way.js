@@ -445,34 +445,24 @@
 
       self._repeats[options.repeat] = self._repeats[options.repeat] || [];
 
-      var wrapperAttr =
-        tagPrefix + '-repeat-wrapper="' + self._repeatsCount + '"',
-        parent = w.dom(element).parent('[' + wrapperAttr + ']');
-      if (!parent.length) {
         self._repeats[options.repeat].push({
           id: self._repeatsCount,
           element: w
             .dom(element)
             .clone(true)
             .removeAttr(tagPrefix + '-repeat')
-            .removeAttr(tagPrefix + '-filter')
+            .attr(tagPrefix + '-repeat-count', self._repeatsCount)
             .get(0),
           selector: options.repeat,
           filter: options.filter
         });
 
-        var wrapper = document.createElement('div');
-        w.dom(wrapper).attr(tagPrefix + '-repeat-wrapper', self._repeatsCount);
-        w.dom(wrapper).attr(tagPrefix + '-scope', options.repeat);
-        if (options.filter) {
-          w.dom(wrapper).attr(tagPrefix + '-filter', options.filter);
-        }
+        w.dom(element).attr(tagPrefix + '-repeat-count', self._repeatsCount);
+        w.dom(element).attr(tagPrefix + '-scope', options.repeat + '.0');
 
-        w.dom(element).replaceWith(wrapper);
         self.updateRepeats(options.repeat);
 
         self._repeatsCount++;
-      }
     }
   };
 
@@ -500,14 +490,20 @@
     var repeats = pickAndMergeParentArrays(self._repeats, selector);
 
     repeats.forEach(function(repeat) {
-      var wrapper = '[' + tagPrefix + '-repeat-wrapper="' + repeat.id + '"]',
-        data = self.get(repeat.selector),
-        items = [];
+      var elementSelector = '[' + tagPrefix + '-repeat-count="' + repeat.id + '"]',
+          currentElement = self.dom(elementSelector);
+
+      if (currentElement.w.length === 0) return;
+
+      var currentScope = currentElement.scope(),
+          data = self.get(currentScope.substring(0, currentScope.lastIndexOf('.'))),
+          items = [];
 
       repeat.filter = repeat.filter || [];
-      w.dom(wrapper).empty();
+
 
       for (var key in data) {
+        if (_w.isArray(data)) key = parseInt(key);
         /*
 				var item = data[key],
 						test = true;
@@ -520,13 +516,18 @@
 				if (!test) { continue; }
 				*/
 
-        w.dom(repeat.element).attr(tagPrefix + '-scope', key);
+        w.dom(repeat.element).attr(tagPrefix + '-scope', repeat.selector + '.' + key);
         var html = w.dom(repeat.element).get(0).outerHTML;
-        html = html.replace(/\$\$key/gi, key);
+        var m = html.match(/\$\$(key|{[^\}]+})/gi);
+        html = html.replace(m, eval(RegExp.$1));
         items.push(html);
       }
 
-      w.dom(wrapper).html(items.join(''));
+      var element = w.dom(elementSelector);
+      for (var i = 1; i < element.length; i++) {
+        element.get(i).remove();
+      }
+      element.get(0).outerHTML = items.join('');
       self.registerBindings();
       self.updateBindings();
     });
