@@ -518,8 +518,8 @@
 
         w.dom(repeat.element).attr(tagPrefix + '-scope', repeat.selector + '.' + key);
         var html = w.dom(repeat.element).get(0).outerHTML;
-        var m = html.match(/\$\$(key|{[^\}]+})/gi);
-        html = html.replace(m, eval(RegExp.$1));
+        html = html.replace(/\$\$key/gi, key);
+        html = html.replace(/\$\$order/gi, key+1);
         items.push(html);
       }
 
